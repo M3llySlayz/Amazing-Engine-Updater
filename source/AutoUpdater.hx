@@ -1,86 +1,93 @@
-import sys.FileSystem;
+package;
+
+//barebones requirements
 import sys.io.File;
-import haxe.Http;
-import sys.process.*;
+import sys.net.Http;
 import haxe.io.Bytes;
+import haxe.zip.Uncompress;
+import lime.utils.Assets;
+
+//fancy flair
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.util.FlxTimer;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
+import flixel.text.FlxText;
 
 class AutoUpdater {
-  public static function main() {
-    // Check for updates
-    if (hasUpdatesAvailable()) {
-      downloadLatestVersion();
-      installLatestVersion();
+  static var repoUrl:String = "https://github.com/M3llySlayz/Amazing-Engine/releases/download/0.3/AE-0.3.zip";
+  static var appPath:String = "Amazing Engine";
+
+  static function main() {
+    downloadLatestVersion();
+  }
+
+  static function downloadLatestVersion() {
+    var http = new Http(repoUrl);
+    var response = http.request(false);
+
+    if (response.isOk()) {
+      var data = response.getData();
+      var zipPath = "latest.zip";
+
+      File.saveContent(zipPath, data);
+
+      // Extract the zip file to the desired app path
+      extractZip(zipPath, appPath);
+
+      // Clean up the downloaded zip file
+      File.deleteFile(zipPath);
+
+      trace("Update complete!");
+    } else {
+      trace("Failed to download the latest version.");
+    }
+  }
+
+  static function extractZip(zipPath:String, destination:String) {
+    // Use your preferred method to extract the zip file, e.g., a library or a command line tool
+    // Here's an example using the "zip" command line tool on Unix-based systems
+    //var cmd = "unzip -o " + zipPath + " -d " + destination;
+    //var exitCode = sys.io.Process.run(cmd);
+
+    //nah, imma do my own thing. - melly morales
+    try
+    {
+    var uncompressingFile:Bytes = new Uncompress().run(File.getBytes(zipPath));
+			if (uncompressingFile.done)
+			{
+				trace('test');
+				return;
+			}
+    } catch(e:Any)
+    {
+      trace ("Couldn't uncompress the zip, sucks to suck");
+      var errorText:FlxText = new FlxText(-70, FlxG.height - 50, 0, "Oops! We can't seem to finish the installation. Is there enough space on your device?");
+      errorText.alpha = 0;
+      add(errorText);
+      FlxTween.tween(errorText, {x: 50, alpha: 1}, 0.4, {ease: FlxEase.quadOut});
+      new FlxTimer().start(3, function (tmr:FlxTimer) {
+        FlxTween.tween(errorText, {x: -50, alpha: 0}, 2, {ease: FlxEase.quadOut});
+      });
     }
 
-    // Run the application
-    runApp();
-  }
-
-  private static function hasUpdatesAvailable(): Bool {
-    // TODO: Implement your logic to check for updates
-    // You can compare the current version of your app with the latest version available on GitHub
-    // Return true if updates are available, otherwise false
-    return false;
-  }
-
-  private static function downloadLatestVersion() {
-    // TODO: Replace with your GitHub repository URL
-    var repositoryUrl = "https://github.com/M3llySlayz/Amazing-Engine/releases/download/0.3/AE-0.3.zip";
-    var targetZipPath = "0.3.zip";
-
-    var http = new Http(repositoryUrl);
-    var file = new File(targetZipPath, "write");
-
-    http.onData = function(data: Bytes) file.write(data);
-    http.onError = function(error: Dynamic) {
-      trace("Error downloading latest version:", error);
-      sys.exit(1);
-    };
-
-    http.onStatus = function(status: Int) {
-      if (status != 200) {
-        trace("Download failed with status:", status);
-        sys.exit(1);
-      }
-    };
-
-    http.request();
-    while (http.status == 0) {
-      // Wait for the download to complete
+    if (exitCode == 0) {
+      trace("Zip extraction complete.");
+    } else {
+      trace("Failed to extract the zip file.");
     }
-
-    file.close();
   }
 
-  private static function installLatestVersion() {
-    // TODO: Implement your logic to install the latest version
-    // Extract the downloaded ZIP file and copy the necessary files to the appropriate location
-    // You can use PowerShell commands to extract the files and copy them
-
-    // Example PowerShell commands:
-    var extractCmd = 'Expand-Archive -Path "latest_version.zip" -DestinationPath "temp_extracted"';
-    var copyCmd = 'Copy-Item -Recurse -Force -Path "temp_extracted/your_repository-main/*" -Destination "your_app_directory"';
-
-    var process = new Process("powershell");
-    process.execute(extractCmd);
-    process.execute(copyCmd);
-
-    while (process.status == 0) {
-      // Wait for the extraction and copy processes to complete
-    }
-
-    // Cleanup temporary files
-    FileSystem.deleteDirectory("temp_extracted");
-    FileSystem.deleteFile("latest_version.zip");
-  }
-
-  private static function runApp() {
-    // TODO: Implement your logic to run the application
-    // Execute your application's main executable or launch the entry point
-    // You can use Haxe's sys API or external commands like 'cmd.exe' to run the application
-
-    // Example command:
-    var runAppCmd = 'cmd.exe /c start AmazingEngine.exe';
-    sys.process.Process.run(runAppCmd, []);
+  public static function getCurrentVersion(path:String):String
+  {
+    var daVer:String = '';
+    #if sys
+    if(FileSystem.exists(path)) daList = File.getContent(path).trim();
+    #else
+    if(Assets.exists(path)) daList = Assets.getText(path).trim();
+    #end
+  
+    return daVer;
   }
 }
