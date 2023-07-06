@@ -71,12 +71,6 @@ class AutoUpdater {
         FlxTween.tween(errorText, {x: -50, alpha: 0}, 2, {ease: FlxEase.quadOut});
       });
     }
-
-    if (exitCode == 0) {
-      trace("Zip extraction complete.");
-    } else {
-      trace("Failed to extract the zip file.");
-    }
   }
 
   public static function getCurrentVersion(path:String):String
