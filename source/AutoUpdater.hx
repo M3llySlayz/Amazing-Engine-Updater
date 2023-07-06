@@ -1,11 +1,14 @@
 package;
 
 //barebones requirements
+//import sys.Http;
 import sys.io.File;
+import sys.FileSystem;
 import sys.net.Http;
 import haxe.io.Bytes;
 import haxe.zip.Uncompress;
 import lime.utils.Assets;
+import flixel.addons.ui.FlxUIState;
 
 //fancy flair
 import flixel.FlxG;
@@ -14,12 +17,15 @@ import flixel.util.FlxTimer;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.text.FlxText;
+import flixel.group.FlxGroup.FlxTypedGroup;
 
-class AutoUpdater {
+using StringTools;
+
+class AutoUpdater extends FlxUIState {
   static var repoUrl:String = "https://github.com/M3llySlayz/Amazing-Engine/releases/download/0.3/AE-0.3.zip";
   static var appPath:String = "Amazing Engine";
 
-  static function main() {
+  override function create() {
     downloadLatestVersion();
   }
 
@@ -37,7 +43,7 @@ class AutoUpdater {
       extractZip(zipPath, appPath);
 
       // Clean up the downloaded zip file
-      File.deleteFile(zipPath);
+      FileSystem.deleteFile(zipPath);
 
       trace("Update complete!");
     } else {
@@ -52,16 +58,14 @@ class AutoUpdater {
     //var exitCode = sys.io.Process.run(cmd);
 
     //nah, imma do my own thing. - melly morales
-    try
-    {
-    var uncompressingFile:Bytes = new Uncompress().run(File.getBytes(zipPath));
+    try{
+      var uncompressingFile:Bytes = new Uncompress().run(File.getBytes(zipPath));
 			if (uncompressingFile.done)
 			{
 				trace('test');
 				return;
 			}
-    } catch(e:Any)
-    {
+    } catch(e:Any) {
       trace ("Couldn't uncompress the zip, sucks to suck");
       var errorText:FlxText = new FlxText(-70, FlxG.height - 50, 0, "Oops! We can't seem to finish the installation. Is there enough space on your device?");
       errorText.alpha = 0;
@@ -73,15 +77,57 @@ class AutoUpdater {
     }
   }
 
-  public static function getCurrentVersion(path:String):String
+  static function getCurrentVersion(path:String):String
   {
     var daVer:String = '';
     #if sys
-    if(FileSystem.exists(path)) daList = File.getContent(path).trim();
+    if(FileSystem.exists(path)) daVer = File.getContent(path).trim();
     #else
-    if(Assets.exists(path)) daList = Assets.getText(path).trim();
+    if(Assets.exists(path)) daVer = Assets.getText(path).trim();
     #end
   
     return daVer;
   }
+  public function add(Object:T):T
+	{
+		if (Object == null)
+		{
+			FlxG.log.warn("Cannot add a `null` object to a FlxGroup.");
+			return null;
+		}
+
+		// Don't bother adding an object twice.
+		if (members.indexOf(Object) >= 0)
+			return Object;
+
+		// First, look for a null entry where we can add the object.
+		var index:Int = getFirstNull();
+		if (index != -1)
+		{
+			members[index] = Object;
+
+			if (index >= length)
+			{
+				length = index + 1;
+			}
+
+			if (_memberAdded != null)
+				_memberAdded.dispatch(Object);
+
+			return Object;
+		}
+
+		// If the group is full, return the Object
+		if (maxSize > 0 && length >= maxSize)
+			return Object;
+
+		// If we made it this far, we need to add the object to the group.
+		members.push(Object);
+		length++;
+
+		if (_memberAdded != null)
+			_memberAdded.dispatch(Object);
+
+		return Object;
+	}
 }
